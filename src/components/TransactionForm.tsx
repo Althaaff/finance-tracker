@@ -44,12 +44,12 @@ export default function TransactionForm({
         description,
         amount: Number(amount),
         category,
-        date: new Date().toISOString().slice(0, 10),
+        date: new Date(),
       });
-    }
 
-    setDescription("");
-    setAmount("");
+      setDescription("");
+      setAmount("");
+    }
   };
 
   return (

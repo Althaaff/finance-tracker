@@ -1,6 +1,6 @@
 "use client";
 
-import { Transaction } from "@/types/transaction";
+import { Transaction } from "@prisma/client";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -29,11 +29,12 @@ export default function TransactionList({
           }}
         >
           <span>
-            {t.date} · {t.category} · {t.description}{" "}
+            {new Date(t.date).toLocaleDateString("en-US")} · {t.category} ·{" "}
+            {t.description}{" "}
           </span>
 
           <strong>
-            {t.amount < 0 ? "-" : "+"} ${Math.abs(t.amount).toFixed(2)}
+            {t.amount < 0 ? "-" : "c+"} ${Math.abs(t.amount).toFixed(2)}
           </strong>
 
           <button

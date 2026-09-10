@@ -1,39 +1,80 @@
 "use client";
 
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { transactionReducer } from "@/lib/transaction-reducer";
 import TransactionForm from "@/components/TransactionForm";
 import TransactionList from "@/components/TransactionList";
 import MonthlySummary from "@/components/MonthlySummary";
-import { Transaction } from "@/types/transaction";
+import type { Transaction } from "@/types/transaction";
+import { useRouter } from "next/navigation";
 
-export default function TransactionsApp() {
-  const [transactions, dispatch] = useReducer(transactionReducer, []);
+interface TransactionsAppProps {
+  initialTransactions: Transaction[];
+}
+
+export default function TransactionsApp({
+  initialTransactions,
+}: TransactionsAppProps) {
+  // const [transactions, dispatch] = useReducer(transactionReducer, []);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
 
-  const handleAdd = (t: Transaction) => {
-    dispatch({
-      type: "add",
-      payload: t,
+  const [transactions, setTransaction] = useState(initialTransactions);
+
+  async function handleAdd(t: Omit<Transaction, "id" | "date">) {
+    const response = await fetch("/api/transactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(t),
     });
-  };
+
+    if (response.ok) {
+      // get the newly created item
+      const newTransaction = await response.json();
+
+      // optimistic update Ui
+      setTransaction((prev) => [newTransaction, ...prev]);
+    }
+  }
 
   const handleEdit = (t: Transaction) => {
     setEditingTransaction(t);
   };
 
-  const handleUpdate = (updatedTransaction: Transaction) => {
-    dispatch({ type: "edit", payload: updatedTransaction });
-    setEditingTransaction(null);
-  };
-
-  const handleDelete = (id: string) => {
-    dispatch({
-      type: "delete",
-      payload: { id },
+  async function handleUpdate(updatedTransaction: Transaction) {
+    const response = await fetch(`/api/transactions/${updatedTransaction.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatedTransaction),
     });
-  };
+
+    if (response.ok) {
+      const savedTransaction = await response.json();
+
+      setTransaction((prev) =>
+        prev.map((item) =>
+          item.id === savedTransaction.id ? savedTransaction : item,
+        ),
+      );
+
+      setEditingTransaction(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const response = await fetch(`/api/transactions/${id}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok) {
+      // filter out the deleted item from state immediately
+      setTransaction((prev) => prev.filter((item) => item.id !== id));
+    }
+  }
 
   return (
     <div>

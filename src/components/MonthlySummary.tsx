@@ -1,4 +1,4 @@
-import { Transaction } from "@/types/transaction";
+import { Transaction } from "@prisma/client";
 
 interface MonthlySummaryProps {
   transactions: Transaction[];
