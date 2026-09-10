@@ -3,7 +3,7 @@ export interface Transaction {
   description: string;
   amount: number;
   category: string;
-  date: string;
+  date: Date;
 }
 
 // Redux Action Type:
