@@ -6,11 +6,18 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Category {
+   General
+   Groceries
+   Rent
+   Salary 
+   Utilities
+}
 
 model Transaction {
   id String @id @default(cuid())
   description String
   amount Float
-  category String
+  category Category @default(General)
   date DateTime @default(now())
 }
