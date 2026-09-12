@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { transactionSchema } from "@/lib/schemas/transaction";
 
 export async function DELETE(
   _request: Request,
@@ -17,21 +18,31 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+    const body = await request.json();
 
-    console.log("ID", id);
+    // validate the incoming body against the shared zod schema
+    const validationResult = transactionSchema.safeParse(body);
 
-    const { description, category, amount } = await request.json();
+    // if validation fails return 400 Bad Request with field errors
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid input data",
+          details: validationResult.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    // extract the validated data safely :
+    const validatedData = validationResult.data;
 
     const updatedTransaction = await prisma.transaction.update({
       where: { id },
-      data: {
-        description,
-        category,
-        amount: Number(amount),
-      },
+      data: validatedData,
     });
 
-    return NextResponse.json(updatedTransaction);
+    return NextResponse.json(updatedTransaction, { status: 200 });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to update transaction" },
