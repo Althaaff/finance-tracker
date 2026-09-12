@@ -1,10 +1,13 @@
 "use client";
 
 import { Transaction } from "@/types/transaction";
-import { useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { transactionSchema, TransactionInput } from "@/lib/schemas/transaction";
 
 interface TransactionFormProps {
-  onAdd: (transaction: Transaction) => void;
+  onAdd: (transaction: TransactionInput) => void;
   editingTransaction: Transaction | null;
   onUpdate: (transaction: Transaction) => void;
 }
@@ -14,75 +17,91 @@ export default function TransactionForm({
   editingTransaction,
   onUpdate,
 }: TransactionFormProps) {
-  const [description, setDescription] = useState(
-    editingTransaction ? editingTransaction.description : "",
-  );
-  const [amount, setAmount] = useState(
-    editingTransaction ? editingTransaction.amount.toString() : "",
-  );
-  const [category, setCategory] = useState(
-    editingTransaction ? editingTransaction.category : "General",
-  );
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<TransactionInput>({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: { description: "", amount: 0, category: "General" },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!description || !amount) return;
-
+  useEffect(() => {
     if (editingTransaction) {
-      // save changes to existing transaction
-      onUpdate({
-        ...editingTransaction,
-        description,
-        amount: Number(amount),
-        category,
+      reset({
+        description: editingTransaction.description,
+        amount: editingTransaction.amount,
+        category: editingTransaction.category,
       });
     } else {
-      // create new transaction:
-      onAdd({
-        id: crypto.randomUUID(),
-        description,
-        amount: Number(amount),
-        category,
-        date: new Date(),
-      });
-
-      setDescription("");
-      setAmount("");
+      reset({ description: "", amount: 0, category: "General" });
     }
+  }, [editingTransaction, reset]);
+
+  const onSubmit = (data: TransactionInput) => {
+    if (editingTransaction) {
+      // update existing transaction
+      onUpdate({
+        ...editingTransaction,
+        ...data,
+      });
+    } else {
+      // add new transaction
+      onAdd(data);
+    }
+    reset({ description: "", amount: 0, category: "General" });
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{ display: "flex", gap: 8, marginBottom: 16 }}
-    >
-      <input
-        type="text"
-        value={description}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setDescription(e.target.value)
-        }
-      />
+    <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: 16 }}>
+      <div className="flex gap-8">
+        <div>
+          <input
+            type="text"
+            placeholder="Description"
+            {...register("description")}
+          />
+          {errors.description && (
+            <p style={{ fontSize: 12, color: "crimson" }}>
+              {errors.description.message}
+            </p>
+          )}
+        </div>
 
-      <input
-        placeholder="Amount (negative = expense)"
-        type="number"
-        value={amount}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setAmount(e.target.value)
-        }
-      />
+        <div>
+          <input
+            type="number"
+            placeholder="Amount"
+            step={"0.01"}
+            {...register("amount", { valueAsNumber: true })}
+          />
 
-      <select value={category} onChange={(e) => setCategory(e.target.value)}>
-        <option>General</option>
-        <option>Groceries</option>
-        <option>Rent</option>
-        <option>Salary</option>
-        <option>Utilities</option>
-      </select>
+          {errors.amount && (
+            <p style={{ color: "crimson", fontSize: 12 }}>
+              {errors.amount.message}
+            </p>
+          )}
+        </div>
 
-      <button type="submit">{editingTransaction ? "Save" : "Add"}</button>
+        <select {...register("category")}>
+          <option>General</option>
+          <option>Groceries</option>
+          <option>Rent</option>
+          <option>Salary</option>
+          <option>Utilities</option>
+        </select>
+
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting
+            ? editingTransaction
+              ? "Saving..."
+              : "Adding..."
+            : editingTransaction
+              ? "Save"
+              : "Add"}
+        </button>
+      </div>
     </form>
   );
 }
